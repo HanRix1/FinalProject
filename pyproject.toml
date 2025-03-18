@@ -1,0 +1,15 @@
+[project]
+name = "final_progect"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "HanRix1", email = "HanRix1@mail.ru"},
+]
+dependencies = ["fastapi>=0.115.11", "pydentic>=0.0.1.dev3", "pydantic-settings>=2.8.1", "sqlalchemy>=2.0.39", "uvicorn>=0.34.0", "alembic>=1.15.1", "PyJWT>=2.10.1", "python-decouple>=3.8", "pydantic[email]>=2.10.6", "asyncpg>=0.30.0", "psycopg2>=2.9.10"]
+requires-python = "==3.12.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false
