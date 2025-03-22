@@ -1,7 +1,8 @@
 import asyncio
 from uuid import UUID
 import bcrypt
-from fastapi import HTTPException,status
+from fastapi import HTTPException, Request, Security,status
+from fastapi.security import APIKeyCookie
 from auth.repository import UserRepository
 from auth.schemas import UserLoginSchema, UserSchema, UserUpdateSchema
 from auth.utils import hash_password
@@ -60,3 +61,12 @@ class UserService:
         
         return updated_user
         
+
+session_cookie = APIKeyCookie(name="session_id", auto_error=True)
+
+class AuthService:
+    async def get_current_user(self, request: Request, session: str = Security(session_cookie)) -> str:
+        session_data = request.session
+        if "user_id" not in session_data:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        return session_data["user_id"]

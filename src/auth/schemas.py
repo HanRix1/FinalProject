@@ -1,3 +1,5 @@
+from typing import Annotated
+from fastapi import Query
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -26,4 +28,4 @@ class UserLoginSchema(BaseModel):
         }
 
 class UserUpdateSchema(BaseModel):
-    new_name: str
+    new_name: Annotated[str, Query()]

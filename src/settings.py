@@ -30,7 +30,6 @@ class DatabaseSettings(BaseSettings):
     
     
 class AuthSettings(BaseSettings):
-    model_config = SettingsConfigDict(str_strip_whitespace=True, env_prefix="jwt_")
+    model_config = SettingsConfigDict(str_strip_whitespace=True, env_prefix="session_")
 
     secret: str
-    algorithm: str
