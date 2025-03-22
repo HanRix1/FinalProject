@@ -1,7 +1,14 @@
-from fastapi import HTTPException, Request
+from typing import Annotated
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth.repository import UserRepository
+from auth.services import UserService
 from auth.utils import decode_jwt
+from database.base import get_session
+
+
 
 
 class JWTBearer(HTTPBearer):
@@ -15,24 +22,41 @@ class JWTBearer(HTTPBearer):
         if credentials:
             if not credentials.scheme == "Bearer":
                 raise HTTPException(
-                    status_code=403, detail="Invalid authentication scheme."
+                    status_code=403, 
+                    detail="Invalid authentication scheme."
                 )
             if not self.verify_jwt(credentials.credentials):
                 raise HTTPException(
-                    status_code=403, detail="Invalid token or expired token."
+                    status_code=403, 
+                    detail="Invalid token or expired token."
                 )
             return decode_jwt(credentials.credentials)
         else:
-            raise HTTPException(status_code=403, detail="Invalid authorization code.")
+            raise HTTPException(
+                status_code=403, 
+                detail="Invalid authorization code."
+            )
 
     def verify_jwt(self, jwtoken: str) -> bool:
-        isTokenValid: bool = False
+            isTokenValid: bool = False
 
-        try:
-            payload = decode_jwt(jwtoken)
-        except:
-            payload = None
-        if payload:
-            isTokenValid = True
+            try:
+                payload = decode_jwt(jwtoken)
+            except:
+                payload = None
+            if payload:
+                isTokenValid = True
 
-        return isTokenValid
+            return isTokenValid
+    
+DataBaseSessionDep = Annotated[AsyncSession, Depends(get_session)]
+
+def get_user_repo(session: DataBaseSessionDep) -> UserRepository:
+    return UserRepository(session)
+
+def get_user_service(user_repo: UserRepository = Depends(get_user_repo)) -> UserService:
+    return UserService(user_repo)
+
+
+UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+JWTBearerDep = Annotated[JWTBearer, Depends(JWTBearer())]
