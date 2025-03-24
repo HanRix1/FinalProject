@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Table
+from sqlalchemy import Column, ForeignKey, Integer, String, Table, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from database.base import Base
 from sqlalchemy.orm import relationship
@@ -28,6 +28,7 @@ class User(Base):
     name: Mapped[str_64]
     email: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
     password: Mapped[str_128]
+    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=True, default=False)
     
     # role_id: Mapped[int] = mapped_column(ForeignKey('roles.id'), nullable=False)
     # role: Mapped['Roles'] = relationship("Roles", back_populates="users")

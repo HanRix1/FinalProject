@@ -29,3 +29,7 @@ class UserLoginSchema(BaseModel):
 
 class UserUpdateSchema(BaseModel):
     new_name: Annotated[str, Query()]
+
+
+class RecoveryTokenSchema(BaseModel):
+    token: Annotated[str, Query()]

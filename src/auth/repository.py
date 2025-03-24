@@ -41,17 +41,19 @@ class UserRepository:
         user = await self.session.scalar(query)
         return user
     
-    async def delete_user_by_id(self, user_id: UUID) -> User | None:
+    async def update_is_deleted(self, user_id: UUID, flag: bool) -> UUID | None:
         query = (
-            delete(User)
+            update(User)
             .where(User.id == user_id)
+            .values(is_deleted=flag)
             .returning(User.id)
         )
+        
         deleted_user_id = await self.session.scalar(query)
         await self.session.commit()
         
         return deleted_user_id
-    
+
     async def update_user_data(self, user_data: UserUpdateSchema, user_id: UUID) -> User:
         query = (
             update(User)

@@ -32,4 +32,14 @@ class DatabaseSettings(BaseSettings):
 class AuthSettings(BaseSettings):
     model_config = SettingsConfigDict(str_strip_whitespace=True, env_prefix="session_")
 
-    secret: str
+    secret_key: str
+
+class MailSettings(BaseSettings):
+    model_config = SettingsConfigDict(str_strip_whitespace=True, env_prefix="mail_")
+    
+    username: str
+    password: str
+    from_mail: str
+    port: str
+    server: str
+    from_name: str

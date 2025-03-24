@@ -1,11 +1,13 @@
 import asyncio
+import time
+from typing import Annotated
 from uuid import UUID
 import bcrypt
-from fastapi import HTTPException, Request, Security,status
-from fastapi.security import APIKeyCookie
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import APIKeyHeader
 from auth.repository import UserRepository
 from auth.schemas import UserLoginSchema, UserSchema, UserUpdateSchema
-from auth.utils import hash_password
+from auth.utils import generate_recovery_token, hash_password, decode_recovery_token
 
 
 class UserService:
@@ -37,17 +39,18 @@ class UserService:
         )     
         return db_user.id
  
-    async def remove_user(self, user_id) -> UUID:
+    async def soft_delete_user(self, user_id) -> str:
         db_user = await self.user_repo.get_user_by_id(user_id=user_id)
 
-        if not db_user:
+        if db_user.is_deleted:
             raise HTTPException(
                 status_code=410,
-                detail="User has been deleted"
+                detail="User has been deleted. To revoke delete go to Email"
             )
-        deleted_user_id = await self.user_repo.delete_user_by_id(user_id=db_user.id)
+        deleted_user_id = await self.user_repo.update_is_deleted(user_id=db_user.id, flag=True)
+        token = await asyncio.to_thread(generate_recovery_token, deleted_user_id)
 
-        return deleted_user_id
+        return token
     
     async def modernize_user(self, user_id: UUID, user_data: UserUpdateSchema):
         db_user = await self.user_repo.get_user_by_id(user_id=user_id)
@@ -61,12 +64,58 @@ class UserService:
         
         return updated_user
         
+    async def recover_account(self, token: str) -> UUID:
+        user_id, expiration_time = await asyncio.to_thread(decode_recovery_token, token)
 
-session_cookie = APIKeyCookie(name="session_id", auto_error=True)
+        if not user_id or float(expiration_time) < time.time():
+            raise HTTPException(
+                status_code=400,
+                detail=""
+            )
+        deleted_user_id = await self.user_repo.update_is_deleted(user_id=user_id, flag=False)
+
+        return deleted_user_id
+
+
 
 class AuthService:
-    async def get_current_user(self, request: Request, session: str = Security(session_cookie)) -> str:
+    async def autorize_user(self, request: Request, user_id: str) -> None:
+        session_data = request.session
+        if "user_id" in session_data:
+            raise HTTPException(
+                status_code=401, 
+                detail="User already autorize"
+            )
+        
+        session_data["user_id"] = user_id
+    
+    async def deautorize_user(self, request: Request, user_id: str) -> None:
+        session_data = request.session
+        if "user_id" in session_data:
+            del session_data["user_id"] 
+            # Место для логгера
+        else:
+            # Место для логгера
+            raise HTTPException(
+                status_code=400,
+                detail=f"User {user_id} is not currently authorized."
+            )
+        
+    async def check_autorization(self, request: Request) -> str:
         session_data = request.session
         if "user_id" not in session_data:
-            raise HTTPException(status_code=401, detail="Unauthorized")
+            raise HTTPException(
+                status_code=401, 
+                detail="Unauthorized"
+            )
         return session_data["user_id"]
+    
+api_key_scheme = APIKeyHeader(name="session_id", auto_error=False)
+
+def get_api_session(api_key: Annotated[str, Depends(api_key_scheme)], request: Request = None):
+    if api_key in None or "session_id" not in (request.session or {}):
+        raise HTTPException(
+            status_code=401, 
+            detail="Non autorize"
+        )
+    
