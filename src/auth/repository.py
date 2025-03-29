@@ -49,10 +49,10 @@ class UserRepository:
             .returning(User.id)
         )
         
-        deleted_user_id = await self.session.scalar(query)
+        user_id = await self.session.scalar(query)
         await self.session.commit()
         
-        return deleted_user_id
+        return user_id
 
     async def update_user_data(self, user_data: UserUpdateSchema, user_id: UUID) -> User:
         query = (

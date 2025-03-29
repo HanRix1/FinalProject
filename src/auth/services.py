@@ -67,10 +67,10 @@ class UserService:
     async def recover_account(self, token: str) -> UUID:
         user_id, expiration_time = await asyncio.to_thread(decode_recovery_token, token)
 
-        if not user_id or float(expiration_time) < time.time():
+        if float(expiration_time) < time.time():
             raise HTTPException(
-                status_code=400,
-                detail=""
+                status_code=410,
+                detail="Recovery token has expired"
             )
         deleted_user_id = await self.user_repo.update_is_deleted(user_id=user_id, flag=False)
 

@@ -1,6 +1,7 @@
 from database.own_types import (
     int32_pk,
     str_128,
+    str_256,
     numeric_10_2,
     uuid_pk,
     str_64,
@@ -12,8 +13,9 @@ __all__ = [
     "Base",
     "int32_pk",
     "str_128",
+    "str_256",
     "numeric_10_2",
     "uuid_pk",
     "str_64",
-    "get_session"
+    "get_session",
 ]
