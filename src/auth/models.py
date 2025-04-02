@@ -23,3 +23,6 @@ class Roles(Base):
     id: Mapped[uuid_pk]
     title: Mapped[str_64]
     description: Mapped[str_256] 
+
+    def __str__(self):
+        return self.title

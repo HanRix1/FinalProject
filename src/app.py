@@ -3,13 +3,12 @@ from auth.admin import create_admin
 from auth.router import router as auth_router
 from starlette_session import SessionMiddleware
 from contextlib import asynccontextmanager
-import asyncio
 from settings import AuthSettings, get_settings
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await asyncio.to_thread(create_admin, app)  
+    await create_admin(app)  
     yield
 
 

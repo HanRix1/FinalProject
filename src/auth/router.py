@@ -4,7 +4,6 @@ from fastapi.responses import JSONResponse
 
 from auth.dependencies import UserServiceDep, AuthServiceDep
 from auth.schemas import UserLoginSchema, UserSchema, UserUpdateSchema, RecoveryTokenSchema
-from auth.services import get_api_session
 from auth.utils import conf
 
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
@@ -20,8 +19,8 @@ async def create_user(
     user_service: UserServiceDep,
     auth_service: AuthServiceDep
 ) -> dict[str, str]:
-    new_user_id = await user_service.register_user(user)
-    await auth_service.autorize_user(request=request, user_id=str(new_user_id))
+    new_user = await user_service.register_user(user)
+    await auth_service.autorize_user(request=request, user_id=new_user.id, role=new_user.role)
     return JSONResponse({"message": "Logged in"})
 
 
@@ -32,8 +31,8 @@ async def user_login(
     user_service: UserServiceDep,
     auth_service: AuthServiceDep
 ):
-    user_id = await user_service.verify_user(user)
-    await auth_service.autorize_user(request=request, user_id=str(user_id))
+    user = await user_service.verify_user(user)
+    await auth_service.autorize_user(request=request, user_id=user.id, role=user.role)
     return JSONResponse({"message": "Logged in"})
 
 

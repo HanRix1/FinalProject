@@ -5,6 +5,7 @@ from uuid import UUID
 import bcrypt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import APIKeyHeader
+from auth.models import User
 from auth.repository import UserRepository
 from auth.schemas import UserLoginSchema, UserSchema, UserUpdateSchema
 from auth.utils import generate_recovery_token, hash_password, decode_recovery_token
@@ -14,18 +15,25 @@ class UserService:
     def __init__(self, user_repo: UserRepository):
         self.user_repo = user_repo
         
-    async def register_user(self, new_user: UserSchema) -> UUID:
+    async def register_user(self, new_user: UserSchema) -> User:
         user = await self.user_repo.get_user_by_email(email=new_user.email)
         if user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Email already exists"
             )
+        
         hashed_password = await asyncio.to_thread(hash_password, new_user.password)
-        new_user_id = await self.user_repo.create_new_user(user=new_user, hashed_password=hashed_password)
-        return new_user_id 
+        role_id = await self.user_repo.get_role_id_by_role_title(role_title="Администратор компании") # тут исправить !!! Вместо константы продумать регестрацию 
+        new_user = await self.user_repo.create_new_user(
+            user=new_user, 
+            hashed_password=hashed_password, 
+            role_id=role_id
+        )
+
+        return new_user
     
-    async def verify_user(self, user: UserLoginSchema) -> UUID:
+    async def verify_user(self, user: UserLoginSchema) -> User:
         db_user = await self.user_repo.get_user_by_email(email=user.email)
 
         if not db_user or not await asyncio.to_thread(
@@ -37,7 +45,7 @@ class UserService:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"
         )     
-        return db_user.id
+        return db_user
  
     async def soft_delete_user(self, user_id) -> str:
         db_user = await self.user_repo.get_user_by_id(user_id=user_id)
@@ -79,7 +87,7 @@ class UserService:
 
 
 class AuthService:
-    async def autorize_user(self, request: Request, user_id: str) -> None:
+    async def autorize_user(self, request: Request, user_id: UUID, role: str) -> None:
         session_data = request.session
         if "user_id" in session_data:
             raise HTTPException(
@@ -87,12 +95,14 @@ class AuthService:
                 detail="User already autorize"
             )
         
-        session_data["user_id"] = user_id
-    
+        session_data["user_id"] = str(user_id)
+        session_data["user_role"] = role
+
     async def deautorize_user(self, request: Request, user_id: str) -> None:
         session_data = request.session
         if "user_id" in session_data:
             del session_data["user_id"] 
+            del session_data["user_role"]
             # Место для логгера
         else:
             # Место для логгера
@@ -109,13 +119,4 @@ class AuthService:
                 detail="Unauthorized"
             )
         return session_data["user_id"]
-    
-api_key_scheme = APIKeyHeader(name="session_id", auto_error=False)
-
-def get_api_session(api_key: Annotated[str, Depends(api_key_scheme)], request: Request = None):
-    if api_key in None or "session_id" not in (request.session or {}):
-        raise HTTPException(
-            status_code=401, 
-            detail="Non autorize"
-        )
     
