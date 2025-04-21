@@ -20,7 +20,10 @@ async def create_user(
     auth_service: AuthServiceDep
 ) -> dict[str, str]:
     new_user = await user_service.register_user(user)
-    await auth_service.autorize_user(request=request, user_id=new_user.id, role=new_user.role)
+    user_id = new_user.id
+    user_role = new_user.role
+    await auth_service.autorize_user(request=request, user_id=user_id, role=user_role)
+
     return JSONResponse({"message": "Logged in"})
 
 

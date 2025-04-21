@@ -24,11 +24,9 @@ class UserService:
             )
         
         hashed_password = await asyncio.to_thread(hash_password, new_user.password)
-        role_id = await self.user_repo.get_role_id_by_role_title(role_title="Администратор компании") # тут исправить !!! Вместо константы продумать регестрацию 
         new_user = await self.user_repo.create_new_user(
             user=new_user, 
             hashed_password=hashed_password, 
-            role_id=role_id
         )
 
         return new_user
@@ -96,7 +94,7 @@ class AuthService:
             )
         
         session_data["user_id"] = str(user_id)
-        session_data["user_role"] = role
+        session_data["user_role"] = str(role)
 
     async def deautorize_user(self, request: Request, user_id: str) -> None:
         session_data = request.session

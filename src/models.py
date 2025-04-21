@@ -1,5 +1,5 @@
 from auth.models import *
-
+from events.models import *
 # from users.models import *
 # from teams.models import *
 # from tasks.models import *
