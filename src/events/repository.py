@@ -2,7 +2,7 @@ from datetime import date, datetime
 from sqlalchemy import desc, func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from auth.models import User, association_table, Department
-from events.models import Marks, News, Meetings, meeting_participants
+from events.models import Marks, News, Meetings, Tasks, meeting_participants
 from events.schemas import NewNewsSchema
 
 
@@ -28,7 +28,7 @@ class EventRepository:
             select(News)
             .order_by(News.created_at)
         )
-        news = await self.session.scalars(query)
+        news = (await self.session.scalars(query)).all()
         return news
     
     async def get_last_news(self) -> News | None:
@@ -92,6 +92,40 @@ class EventRepository:
 
         annual_summary = await self.session.scalar(query)
         return annual_summary
+    
+
+    async def get_users_meetings(self, period_start: datetime, period_end: datetime, user_id: str) -> list[Meetings] | None:
+        query = (
+            select(Meetings)
+            .join(meeting_participants, Meetings.id == meeting_participants.c.meeting_id)
+            .where(
+                and_(
+                    meeting_participants.c.user_id == user_id,
+                    Meetings.start_at < period_end,
+                    Meetings.start_at >= period_start
+                )
+            )            
+        )
+
+        meetings = await self.session.scalars(query)
+        return meetings.all()
+
+
+    async def get_users_tasks(self, period_start: datetime, period_end: datetime, user_id: str) -> list[Tasks] | None:
+        query = (
+            select(Tasks)
+            .where(
+                and_(
+                    Tasks.assignee_id == user_id,
+                    Tasks.deadline < period_end,
+                    Tasks.deadline >= period_start
+                )
+            )
+        )
+        
+        tasks = await self.session.scalars(query)
+        return tasks.all()
+
 
 
 async def get_team_members_query(user_id: str):

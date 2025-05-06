@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 
 from auth.dependencies import AuthServiceDep
 from events.dependencies import EventServiceDep
-from events.schemas import NewNewsSchema, NewsOut, QuarterSchema, RainitgOut
+from events.schemas import CalendarOut, NewNewsSchema, NewsOut, QuarterSchema, RainitgOut, CalendarSchema
 
 router = APIRouter(
     prefix="/event"
@@ -76,3 +76,18 @@ async def get_personal_annual_summary(
     user_id = await auth_service.check_autorization(request=request)
     annual_summary = await event_service.view_annual_summary(user_id=user_id)
     return annual_summary
+
+
+
+@router.get("/calendar", tags=["calendar"], response_model=CalendarOut)
+async def get_monthly_calendar(
+    event_service: EventServiceDep,
+    auth_service: AuthServiceDep,
+    request: Request,
+    period: Annotated[CalendarSchema, Depends()]
+):
+    user_id = await auth_service.check_autorization(request=request)
+    tasks = await event_service.view_calendar(user_id=user_id, period=period)
+    return tasks 
+
+    

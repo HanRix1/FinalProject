@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 53d2b5e67511
+Revision ID: ff2ef7b00306
 Revises: 
-Create Date: 2025-04-11 03:18:57.172842
+Create Date: 2025-04-30 16:04:01.010910
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '53d2b5e67511'
+revision: str = 'ff2ef7b00306'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,13 +28,13 @@ def upgrade() -> None:
     sa.Column('theme', sa.String(length=128), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_meetings'))
     )
-    op.create_table('tasks',
+    op.create_table('news',
     sa.Column('id', sa.Uuid(), nullable=False),
-    sa.Column('description', sa.String(length=156), nullable=False),
-    sa.Column('status', sa.Enum('OPEN', 'IN_PROGRESS', 'DONE', name='task_status'), nullable=False),
-    sa.Column('coments', sa.String(length=156), nullable=False),
-    sa.Column('deadline', sa.DateTime(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_tasks'))
+    sa.Column('title', sa.String(length=64), nullable=False),
+    sa.Column('text', sa.String(length=156), nullable=False),
+    sa.Column('author', sa.String(length=128), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_news'))
     )
     op.create_table('users',
     sa.Column('id', sa.Uuid(), nullable=False),
@@ -46,16 +46,31 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id', name=op.f('pk_users')),
     sa.UniqueConstraint('email', name=op.f('uq_users_email'))
     )
-    op.create_table('events',
+    op.create_table('marks',
     sa.Column('id', sa.Uuid(), nullable=False),
-    sa.Column('start_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('duration', sa.Time(), nullable=False),
-    sa.Column('type', sa.String(length=64), nullable=False),
-    sa.Column('task_id', sa.Uuid(), nullable=False),
+    sa.Column('task_description', sa.String(length=156), nullable=False),
+    sa.Column('assignee_id', sa.Uuid(), nullable=False),
+    sa.Column('assignee_rating', sa.Integer(), nullable=True),
+    sa.Column('task_deadline', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['assignee_id'], ['users.id'], name=op.f('fk_marks_assignee_id_users')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_marks'))
+    )
+    op.create_table('meeting_participants',
     sa.Column('meeting_id', sa.Uuid(), nullable=False),
-    sa.ForeignKeyConstraint(['meeting_id'], ['meetings.id'], name=op.f('fk_events_meeting_id_meetings')),
-    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], name=op.f('fk_events_task_id_tasks')),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_events'))
+    sa.Column('user_id', sa.Uuid(), nullable=False),
+    sa.ForeignKeyConstraint(['meeting_id'], ['meetings.id'], name=op.f('fk_meeting_participants_meeting_id_meetings')),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_meeting_participants_user_id_users')),
+    sa.PrimaryKeyConstraint('meeting_id', 'user_id', name=op.f('pk_meeting_participants'))
+    )
+    op.create_table('tasks',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('description', sa.String(length=156), nullable=False),
+    sa.Column('status', sa.Enum('OPEN', 'IN_PROGRESS', 'DONE', name='task_status'), nullable=False),
+    sa.Column('coments', sa.String(length=156), nullable=False),
+    sa.Column('deadline', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('assignee_id', sa.Uuid(), nullable=False),
+    sa.ForeignKeyConstraint(['assignee_id'], ['users.id'], name=op.f('fk_tasks_assignee_id_users')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_tasks'))
     )
     op.create_table('teams',
     sa.Column('id', sa.Uuid(), nullable=False),
@@ -88,9 +103,11 @@ def downgrade() -> None:
     op.drop_table('association_table')
     op.drop_table('departments')
     op.drop_table('teams')
-    op.drop_table('events')
-    op.drop_table('users')
     op.drop_table('tasks')
+    op.drop_table('meeting_participants')
+    op.drop_table('marks')
+    op.drop_table('users')
+    op.drop_table('news')
     op.drop_table('meetings')
     op.execute("DROP TYPE IF EXISTS task_status")
     op.execute("DROP TYPE IF EXISTS user_roles")

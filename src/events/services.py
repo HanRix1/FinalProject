@@ -1,7 +1,7 @@
 from fastapi import status
 from fastapi import HTTPException
 from events.repository import EventRepository
-from events.schemas import NewNewsSchema, QuarterSchema
+from events.schemas import CalendarSchema, NewNewsSchema, QuarterSchema
 
 
 class EventService:
@@ -69,3 +69,38 @@ class EventService:
             )
         
         return annual_summary
+    
+    async def view_calendar(self, user_id: str, period: CalendarSchema):
+        tasks = await self.event_repo.get_users_tasks(
+            period_start=period.start,
+            period_end=period.end,
+            user_id=user_id
+        )
+
+        meetings = await self.event_repo.get_users_meetings(
+            period_start=period.start,
+            period_end=period.end,
+            user_id=user_id
+        )
+
+        if not meetings and not tasks:
+            raise HTTPException(
+                status_code=status.HTTP_204_NO_CONTENT,
+                detail="No events in this period"
+            )
+        
+        calendar = {
+            "tasks": tasks,
+            "meetings": meetings
+        }
+
+        return calendar
+
+
+# в функции view_calendar сделать 2 вызова функций репо
+# 1) взять все такси 
+# 2) всзять все встречи 
+# 3) вывести в общем формате 
+
+# Потом сделать общение между микросервисами 
+

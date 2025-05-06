@@ -1,10 +1,8 @@
 import asyncio
 import time
-from typing import Annotated
 from uuid import UUID
 import bcrypt
 from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import APIKeyHeader
 from auth.models import User
 from auth.repository import UserRepository
 from auth.schemas import UserLoginSchema, UserSchema, UserUpdateSchema

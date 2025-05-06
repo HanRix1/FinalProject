@@ -15,6 +15,7 @@ from events.models import Marks, Meetings, Tasks
 from wtforms.widgets import ListWidget, CheckboxInput
 from starlette import status
 from events.repository import get_team_members_query, get_users_with_existing_meetings
+from events.utils import TaskStatus
 
 
 class AdminAuth(AuthenticationBackend):
@@ -53,7 +54,7 @@ class UsersAdmin(ModelView, model=User):
     name_plural = "Users"
     icon = "fa-solid fa-user"
     category = "accounts"
-
+    
     # def is_accessible(self, request):
     #     if request.session["user_role"] == "Администратор компании":
     #         return True
@@ -72,23 +73,27 @@ class UsersAdmin(ModelView, model=User):
     #     return 
 
 class TeamsAdmin(ModelView, model=Team):
-    column_list = ["name", "departments", "description"]
+    column_list = ["name", "departments", "description", "dirictor"]
     form_excluded_columns = [Team.departments]
     name = "Team"
     name_plural = "Teams"
     category = "accounts"
+    icon = "fa-solid fa-people-group"
 
 class DepartmentAdmin(ModelView, model=Department):
     column_list = ["team", "name", "employees", "description"]
     name = "Department"
     name_plural = "Departmens"
     category = "accounts"
+    icon = "fa-solid fa-users"
+
 
 class TasksAdmin(ModelView, model=Tasks):
-    column_exclude_list = ["id", "assignee_id", "department_id"]
+    column_exclude_list = ["id", "assignee_id"]
     name = "Task"
     name_plural = "Tasks"
     category = "Events"
+    icon = "fa-solid fa-list-check"
 
     async def on_model_delete(self, model: Tasks, request: Request):
         deleted_task = Marks(
@@ -104,16 +109,21 @@ class TasksAdmin(ModelView, model=Tasks):
         await super().on_model_delete(model, request)
 
 
+
 class MakrsAdmin(ModelView, model=Marks):
     column_exclude_list = ["id", "assignee_id"]
     name = "Mark"
     name_plural = "Makrs"
     category = "Events" 
-
+    icon = "fa-solid fa-thumbs-up"
 
 class MeetingsAdmin(ModelView, model=Meetings):
     column_list = ["start_at", "duration", "theme", "participants"]
-    
+    name = "Meeting"
+    name_plural = "Meetings"
+    category = "Events"
+    icon = "fa-solid fa-handshake"
+
     def is_accessible(self, request):
         self.request = request
         return super().is_accessible(request)
@@ -132,7 +142,7 @@ class MeetingsAdmin(ModelView, model=Meetings):
         choices = [(str(user.id), user.name) for user in users]
 
         form_class.participants = SelectMultipleField(
-            "Participants",
+            "Participants", # сделать это поле обязятельным
             choices=choices,
             widget=ListWidget(prefix_label=False),
             option_widget=CheckboxInput()
