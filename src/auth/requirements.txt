@@ -1,0 +1,4 @@
+pydantic[email]==2.10.6
+fastapi-mail==1.4.2
+sqladmin==0.20.1
+websockets==15.0.1

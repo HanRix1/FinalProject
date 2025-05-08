@@ -6,9 +6,16 @@
       "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
-      "args": ["app:create_app", "--factory", "--reload"],
+      "args": [
+        "auth.app:create_app",
+        "--factory",
+        "--reload"
+      ],
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
       "console": "integratedTerminal",
-      "justMyCode": true
+      "justMyCode": false
     }
   ]
 }

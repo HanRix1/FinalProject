@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, ValidationError
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Annotated
 from fastapi import Query
 
@@ -8,22 +8,26 @@ class UserSchema(BaseModel):
     email: Annotated[EmailStr, Field()]
     password: Annotated[str, Field(min_length=4, max_length=100)]
 
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "name": "Kozhemyaka Artem Alexsandrovich",
-            "email": "tvoyo_mblLo@mail.ru",
-            "password": "password",
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "Kozhemyaka Artem Alexsandrovich",
+                "email": "tvoyo_mblLo@mail.ru",
+                "password": "password",
+            }
         }
-    })
+    )
 
 
 class UserLoginSchema(BaseModel):
     email: Annotated[EmailStr, Field()]
     password: Annotated[str, Field(min_length=4, max_length=100)]
 
-    model_config = ConfigDict(json_schema_extra={
-        "example": {"email": "tvoyo_mblLo@mail.ru", "password": "password"}
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"email": "tvoyo_mblLo@mail.ru", "password": "password"}
+        }
+    )
 
 
 class UserUpdateSchema(BaseModel):

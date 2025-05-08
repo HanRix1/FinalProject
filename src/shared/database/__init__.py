@@ -1,4 +1,4 @@
-from database.own_types import (
+from shared.database.own_types import (
     int32_pk,
     str_128,
     str_256,
@@ -6,7 +6,7 @@ from database.own_types import (
     uuid_pk,
     str_64,
 )
-from database.base import get_session, Base
+from shared.database.base import get_session, Base
 
 
 __all__ = [

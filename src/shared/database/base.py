@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 
-from settings import DatabaseSettings, get_settings
+from shared.settings import DatabaseSettings, get_settings
 
 
 meta = MetaData(

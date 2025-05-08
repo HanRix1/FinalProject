@@ -2,12 +2,13 @@ from datetime import datetime, time
 import uuid
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, Table, Time, Enum
 from sqlalchemy.orm import Mapped, mapped_column
-from auth.models import User
-from database.base import Base
 from sqlalchemy.orm import relationship
-from database import uuid_pk, str_64, str_128, str_256
-from events.utils import TaskStatus
 from sqlalchemy.sql import func
+
+from shared.models.auth_models import User
+from events.utils import TaskStatus
+from shared.database.base import Base
+from shared.database import uuid_pk, str_64, str_128, str_256
 
 
 class News(Base):
@@ -17,7 +18,10 @@ class News(Base):
     title: Mapped[str_64]
     text: Mapped[str_256]
     author: Mapped[str_128]
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
 
 class Marks(Base):
     __tablename__ = "marks"
@@ -36,8 +40,7 @@ class Tasks(Base):
     id: Mapped[uuid_pk]
     description: Mapped[str_256]
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, name="task_status"),
-        default=TaskStatus.OPEN
+        Enum(TaskStatus, name="task_status"), default=TaskStatus.OPEN
     )
     coments: Mapped[str_256]
     deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -50,8 +53,9 @@ meeting_participants = Table(
     "meeting_participants",
     Base.metadata,
     Column("meeting_id", ForeignKey("meetings.id"), primary_key=True),
-    Column("user_id", ForeignKey("users.id"), primary_key=True)
+    Column("user_id", ForeignKey("users.id"), primary_key=True),
 )
+
 
 class Meetings(Base):
     __tablename__ = "meetings"
