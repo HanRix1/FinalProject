@@ -1,0 +1,41 @@
+  services:
+    auth_service:
+      build:
+        context: .
+        dockerfile: ./src/auth/dockerfile
+      ports:
+        - "8000:8000"
+      depends_on:
+        - postgres
+        - redis
+      env_file: .env
+
+    event_service:
+      build:
+        context: .
+        dockerfile: ./src/events/dockerfile
+      ports:
+        - "8001:8001"
+      depends_on:
+        - postgres
+        - redis
+      env_file: .env
+
+    postgres:
+      image: postgres:14
+      volumes:
+        - ./dev/var/postgres_data:/var/lib/postgresql/data/
+      environment:
+        POSTGRES_DB: ${DATABASE_NAME}
+        POSTGRES_USER: ${DATABASE_USERNAME}
+        POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      ports:
+        - "5432:5432"
+      env_file: .env
+
+    redis:
+      image: redis
+      container_name: redis
+      restart: unless-stopped
+      ports:
+        - "6379:6379"
