@@ -64,4 +64,7 @@ class Meetings(Base):
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     duration: Mapped[time] = mapped_column(Time)
     theme: Mapped[str_128]
-    participants: Mapped[list["User"]] = relationship(secondary=meeting_participants)
+    participants: Mapped[list["User"]] = relationship(
+        secondary=meeting_participants, 
+        back_populates="meetings"
+    )

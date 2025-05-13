@@ -1,4 +1,3 @@
-from pydantic import EmailStr
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -24,7 +23,7 @@ class UserRepository:
         await self.session.refresh(new_user)
         return new_user
 
-    async def get_user_by_email(self, email: EmailStr) -> User | None:
+    async def get_user_by_email(self, email: str) -> User | None:
         query = select(User).where(User.email == email)
         user = await self.session.scalar(query)
         return user
@@ -35,10 +34,15 @@ class UserRepository:
         return user
 
     async def update_is_deleted(self, user_id: UUID, flag: bool) -> UUID | None:
-        query = update(User).where(User.id == user_id).values(is_deleted=flag)
-
-        user_id = await self.session.scalar(query)
+        query = (
+            update(User)
+            .where(User.id == user_id)
+            .values(is_deleted=flag)
+            .returning(User.id)
+        )
+        result = await self.session.execute(query)
         await self.session.commit()
+        user_id = result.scalar_one_or_none()
 
         return user_id
 
@@ -58,35 +62,34 @@ class UserRepository:
         return updated_user
 
 
-async def get_team_members_query(user_id: str):
+
+def get_team_members_query(user_id: str):
     team_id_subq = (
         select(Department.team_id)
-        .join(association_table, Department.id == association_table.c.department_id)
-        .where(association_table.c.user_id == user_id)
+        .join(Department.employees)
+        .where(User.id == user_id)
         .limit(1)
         .scalar_subquery()
     )
 
     stmt = (
         select(User)
-        .join(association_table, User.id == association_table.c.user_id)
-        .join(Department, Department.id == association_table.c.department_id)
-        .where(Department.team_id == team_id_subq)
         .distinct()
+        .select_from(User)
+        .join(User.departments)
+        .where(Department.team_id == team_id_subq)
     )
 
     return stmt
 
-
-async def get_users_with_existing_meetings():
-    qurey = (
+def get_users_with_existing_meetings():
+    query = (
         select(
             Meetings.start_at,
             Meetings.duration,
-            meeting_participants.c.user_id,
+            User.id,
             User.name,
         )
-        .join(meeting_participants, Meetings.id == meeting_participants.c.meeting_id)
-        .join(User, User.id == meeting_participants.c.user_id)
+        .join(Meetings.participants)
     )
-    return qurey
+    return query

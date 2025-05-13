@@ -25,7 +25,7 @@ async def create_user(
     new_user = await user_service.register_user(user)
     user_id = new_user.id
     user_role = new_user.role
-    await auth_service.autorize_user(request=request, user_id=user_id, role=user_role)
+    await auth_service.authorize_user(request=request, user_id=user_id, role=user_role)
 
     return JSONResponse({"message": "Logged in"})
 
@@ -38,14 +38,14 @@ async def user_login(
     auth_service: AuthServiceDep,
 ):
     user = await user_service.verify_user(user)
-    await auth_service.autorize_user(request=request, user_id=user.id, role=user.role)
+    await auth_service.authorize_user(request=request, user_id=user.id, role=user.role)
     return JSONResponse({"message": "Logged in"})
 
 
 @router.delete("/logout", tags=["auth"])
 async def user_logout(request: Request, auth_service: AuthServiceDep):
-    user_id = await auth_service.check_autorization(request=request)
-    await auth_service.deautorize_user(request=request, user_id=user_id)
+    user_id = await auth_service.check_authorization(request=request)
+    await auth_service.deauthorize_user(request=request, user_id=user_id)
 
 
 @router.delete("/delete", tags=["management"])
@@ -55,10 +55,10 @@ async def delete_user(
     user_service: UserServiceDep,
     background_tasks: BackgroundTasks,
 ) -> JSONResponse:
-    user_id = await auth_service.check_autorization(request=request)
+    user_id = await auth_service.check_authorization(request=request)
     token = await user_service.soft_delete_user(user_id=user_id)
 
-    await auth_service.deautorize_user(request=request, user_id=user_id)
+    await auth_service.deauthorize_user(request=request, user_id=user_id)
 
     message = MessageSchema(
         subject="Recovery account token",
@@ -83,8 +83,8 @@ async def update_user(
     user_service: UserServiceDep,
     user_update_data: UserUpdateSchema,
 ):
-    user_id = await auth_service.check_autorization(request)
-    updated_user = await user_service.modernize_user(
+    user_id = await auth_service.check_authorization(request)
+    updated_user = await user_service.edit_user(
         user_id=user_id, user_data=user_update_data
     )
     return updated_user
@@ -98,5 +98,5 @@ async def revoke_delete(
     token: RecoveryTokenSchema,
 ) -> JSONResponse:
     user_id = await user_service.recover_account(token.token)
-    await auth_service.autorize_user(request=request, user_id=str(user_id))
+    await auth_service.authorize_user(request=request, user_id=str(user_id))
     return JSONResponse(content={"message": "Account was recover"}, status_code=201)

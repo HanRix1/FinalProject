@@ -1,15 +1,15 @@
 from datetime import date, datetime
+from typing import Optional
 from sqlalchemy import desc, func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from events.schemas import NewNewsSchema
-from shared.models.auth_models import User, association_table
+from shared.models.auth_models import Department, User
 from shared.models.events_models import (
     Marks,
     News,
     Meetings,
-    Tasks,
-    meeting_participants,
+    Tasks
 )
 
 
@@ -27,7 +27,7 @@ class EventRepository:
         return new_news
 
     async def get_all_news(self) -> list[News] | None:
-        query = select(News).order_by(News.created_at)
+        query = select(News).order_by(desc(News.created_at))
         news = (await self.session.scalars(query)).all()
         return news
 
@@ -47,12 +47,12 @@ class EventRepository:
             .where(Marks.assignee_id == user_id)
             .order_by(Marks.task_deadline)
         )
-        raiting = await self.session.scalars(query)
-        return raiting.all()
+        rating = await self.session.scalars(query)
+        return rating.all()
 
-    async def get_quarter_avarage(
+    async def get_quarter_average(
         self, user_id: str, start_date: date, end_date: date
-    ) -> float | None:
+    ) -> Optional[float]:
         query = select(func.avg(Marks.assignee_rating)).where(
             and_(
                 Marks.assignee_id == user_id,
@@ -60,19 +60,23 @@ class EventRepository:
                 Marks.task_deadline >= start_date,
             )
         )
-        quarter_avarage = await self.session.scalar(query)
-        return quarter_avarage
+        quarter_average = await self.session.scalar(query)
+        return quarter_average
 
-    async def get_annual_summary(self, user_id: str) -> float | None:
+    async def get_annual_summary(self, user_id: str) -> Optional[float]:
+        department_id_subq = (
+            select(Department.id)
+            .join(Department.employees)
+            .where(User.id == user_id)
+            .limit(1)
+            .scalar_subquery()
+        )
+
         query = select(func.avg(Marks.assignee_rating)).where(
             Marks.assignee_id.in_(
-                select(association_table.c.user_id).where(
-                    association_table.c.department_id
-                    == select(association_table.c.department_id)
-                    .where(association_table.c.user_id == user_id)
-                    .limit(1)
-                    .scalar_subquery()
-                )
+                select(User.id)
+                .join(User.departments)
+                .where(Department.id == department_id_subq)
             )
         )
 
@@ -84,16 +88,15 @@ class EventRepository:
     ) -> list[Meetings] | None:
         query = (
             select(Meetings)
-            .join(
-                meeting_participants, Meetings.id == meeting_participants.c.meeting_id
-            )
+            .join(Meetings.participants)
             .where(
                 and_(
-                    meeting_participants.c.user_id == user_id,
+                    User.id == user_id,
                     Meetings.start_at < period_end,
                     Meetings.start_at >= period_start,
                 )
             )
+            .order_by(Meetings.start_at)
         )
 
         meetings = await self.session.scalars(query)
@@ -102,12 +105,16 @@ class EventRepository:
     async def get_users_tasks(
         self, period_start: datetime, period_end: datetime, user_id: str
     ) -> list[Tasks] | None:
-        query = select(Tasks).where(
-            and_(
-                Tasks.assignee_id == user_id,
-                Tasks.deadline < period_end,
-                Tasks.deadline >= period_start,
+        query = (
+            select(Tasks)
+            .where(
+                and_(
+                    Tasks.assignee_id == user_id,
+                    Tasks.deadline < period_end,
+                    Tasks.deadline >= period_start,
+                )
             )
+            .order_by(Tasks.deadline)
         )
 
         tasks = await self.session.scalars(query)

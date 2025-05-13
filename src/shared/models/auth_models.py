@@ -4,6 +4,7 @@ import uuid
 import enum
 
 from shared.database.base import Base
+from shared.models.events_models import meeting_participants
 from shared.database import uuid_pk, str_64, str_128, str_256
 
 
@@ -18,8 +19,8 @@ class UsersRoles(enum.Enum):
 association_table = Table(
     "association_table",
     Base.metadata,
-    Column("user_id", ForeignKey("users.id")),
-    Column("department_id", ForeignKey("departments.id")),
+    Column("user_id", ForeignKey("users.id"), primary_key=True),
+    Column("department_id", ForeignKey("departments.id"), primary_key=True),
 )
 
 
@@ -29,8 +30,16 @@ class User(Base):
     id: Mapped[uuid_pk]
     name: Mapped[str_64]
     email: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
-    password: Mapped[str_128]
-    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=True, default=False)
+    password: Mapped[str_128] # Хэш пароля, а не сам пароль
+    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    departments = relationship(
+        "Department", secondary=association_table, back_populates="employees"
+    ) 
+
+    meetings = relationship(
+        "Meetings", secondary=meeting_participants, back_populates="participants"
+    )
 
     role: Mapped[UsersRoles] = mapped_column(
         Enum(UsersRoles, name="user_roles"), default=UsersRoles.EMPLOYEE
@@ -47,14 +56,14 @@ class Team(Base):
     name: Mapped[str_64]
     description: Mapped[str_256]
 
-    dirictor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    dirictor: Mapped["User"] = relationship()
+    director_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    director: Mapped["User"] = relationship()
 
     departments: Mapped[list["Department"]] = relationship(
         "Department", back_populates="team", viewonly=True
     )
 
-    @validates("dirictor")
+    @validates("director")
     def validate_director_role(self, key, user: User):
         if user.role != UsersRoles.TEAM_DIRECTOR:
             raise ValueError(
@@ -76,7 +85,10 @@ class Department(Base):
     team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.id"))
     team: Mapped["Team"] = relationship("Team", back_populates="departments")
 
-    employees: Mapped[list["User"]] = relationship(secondary=association_table)
+    employees: Mapped[list["User"]] = relationship(
+        secondary=association_table,
+        back_populates="departments"
+    )
 
     def __str__(self):
         return self.name

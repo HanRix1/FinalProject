@@ -1,16 +1,19 @@
 from datetime import timedelta, timezone
+import uuid
 from fastapi import FastAPI, HTTPException
 from sqladmin import Admin, ModelView
 from wtforms import SelectMultipleField
 from sqladmin.authentication import AuthenticationBackend
 from starlette.requests import Request
 from wtforms.widgets import ListWidget, CheckboxInput
+from wtforms.validators import DataRequired
 from starlette import status
 
 from auth.repository import UserRepository
 from auth.schemas import UserLoginSchema
 from auth.services import UserService
 from auth.repository import get_team_members_query, get_users_with_existing_meetings
+from auth.utils import is_overlap
 from shared.models.auth_models import User, Team, Department
 from shared.services import AuthService
 from shared.database.base import engine, get_session_ctx
@@ -20,7 +23,7 @@ from shared.models.events_models import Marks, Meetings, Tasks
 class AdminAuth(AuthenticationBackend):
     def __init__(self, user_service: UserService, auth_service: AuthService) -> None:
         self.middlewares = []
-        self.user_user_service = user_service
+        self.user_service = user_service
         self.auth_service = auth_service
 
     async def login(self, request: Request) -> bool:
@@ -28,52 +31,39 @@ class AdminAuth(AuthenticationBackend):
         user_login = UserLoginSchema(
             email=form.get("username"), password=form.get("password")
         )
-        user = await self.user_user_service.verify_user(user=user_login)
-        await self.auth_service.autorize_user(
+        user = await self.user_service.verify_user(user=user_login)
+        await self.auth_service.authorize_user(
             request=request, user_id=user.id, role=user.role
         )
         return True
 
     async def logout(self, request: Request) -> bool:
-        user_id = await self.auth_service.check_autorization(request=request)
-        await self.auth_service.deautorize_user(request=request, user_id=user_id)
+        user_id = await self.auth_service.check_authorization(request=request)
+        await self.auth_service.deauthorize_user(request=request, user_id=user_id)
         return True
 
     async def authenticate(self, request: Request) -> bool:
         user_id = request.session.get("user_id")
-        if not user_id:
-            return False
 
+        try:
+            uuid.UUID(user_id)
+        except (ValueError, TypeError):
+            return False
+        
         return True
 
 
 class UsersAdmin(ModelView, model=User):
     column_exclude_list = ["password", "role_id", "department_id"]
-    can_create = False
+    can_create = False # Создание пользователей происходит только по ссылке => can_create - False
     name = "User"
     name_plural = "Users"
     icon = "fa-solid fa-user"
     category = "accounts"
 
-    # def is_accessible(self, request):
-    #     if request.session["user_role"] == "Администратор компании":
-    #         return True
-    #     else:
-    #         return False
-
-    # async def is_accessible(self, request):
-    #     user_id = request.session.get("user_id")
-    #     async with get_session_ctx() as session:
-    #         query = (
-    #             select(User.role)
-    #             .where(User.id == user_id)
-    #         )
-    #         role = await session.scalar(query)
-    #     return
-
 
 class TeamsAdmin(ModelView, model=Team):
-    column_list = ["name", "departments", "description", "dirictor"]
+    column_list = ["name", "departments", "description", "director"]
     form_excluded_columns = [Team.departments]
     name = "Team"
     name_plural = "Teams"
@@ -110,7 +100,7 @@ class TasksAdmin(ModelView, model=Tasks):
         await super().on_model_delete(model, request)
 
 
-class MakrsAdmin(ModelView, model=Marks):
+class MarksAdmin(ModelView, model=Marks):
     column_exclude_list = ["id", "assignee_id"]
     name = "Mark"
     name_plural = "Makrs"
@@ -126,7 +116,11 @@ class MeetingsAdmin(ModelView, model=Meetings):
     icon = "fa-solid fa-handshake"
 
     def is_accessible(self, request):
-        self.request = request
+        """
+        Сохраняем request в self, чтобы использовать его в scaffold_form.
+        Безопасно, так как экземпляр класса создаётся на каждый запрос.
+        """
+        self.request = request 
         return super().is_accessible(request)
 
     async def scaffold_form(self, rules=None):
@@ -143,8 +137,9 @@ class MeetingsAdmin(ModelView, model=Meetings):
         choices = [(str(user.id), user.name) for user in users]
 
         form_class.participants = SelectMultipleField(
-            "Participants",  # сделать это поле обязятельным
+            "Participants",
             choices=choices,
+            validators=[DataRequired()],
             widget=ListWidget(prefix_label=False),
             option_widget=CheckboxInput(),
         )
@@ -159,8 +154,8 @@ class MeetingsAdmin(ModelView, model=Meetings):
                 meetings = result.all()
 
             t = data["duration"]
-            new_begin = data["start_at"].astimezone(timezone.utc)
-            new_end = new_begin + timedelta(
+            new_meeting_begin = data["start_at"].astimezone(timezone.utc)
+            new_meeting_end = new_meeting_begin + timedelta(
                 hours=t.hour, minutes=t.minute, seconds=t.second
             )
             new_user_ids = data["participants"]
@@ -169,19 +164,24 @@ class MeetingsAdmin(ModelView, model=Meetings):
                 if str(user_id) not in new_user_ids:
                     continue
 
-                existing_begin = start_at
-                existing_end = start_at + timedelta(
+                existing_meeting_begin = start_at
+                existing_meeting_end = start_at + timedelta(
                     hours=duration.hour,
                     minutes=duration.minute,
                     seconds=duration.second,
                 )
 
-                if not (new_end <= existing_begin or new_begin >= existing_end):
+                if await is_overlap(
+                    new_meeting_begin, 
+                    new_meeting_end, 
+                    existing_meeting_begin, 
+                    existing_meeting_end
+                ):
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail=(
-                            f"User {name} is already booked for another meeting "
-                            f"from {existing_begin.isoformat()} to {existing_end.isoformat()}."
+                            f"User {name} is already booked for another meeting"
+                            f"from {existing_meeting_begin.isoformat()} to {existing_meeting_end.isoformat()}."
                         ),
                     )
 
@@ -204,7 +204,7 @@ async def create_admin(app: FastAPI):
         TeamsAdmin,
         DepartmentAdmin,
         TasksAdmin,
-        MakrsAdmin,
+        MarksAdmin,
         MeetingsAdmin,
     ]
     for view in views:

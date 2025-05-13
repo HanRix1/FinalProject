@@ -118,9 +118,9 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(length=64), nullable=False),
         sa.Column("description", sa.String(length=156), nullable=False),
-        sa.Column("dirictor_id", sa.Uuid(), nullable=False),
+        sa.Column("director_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(
-            ["dirictor_id"], ["users.id"], name=op.f("fk_teams_dirictor_id_users")
+            ["director_id"], ["users.id"], name=op.f("fk_teams_director_id_users")
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_teams")),
     )

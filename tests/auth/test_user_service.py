@@ -110,17 +110,17 @@ class TestUserSerice:
             (user_updated_schema, None, HTTPException),
         ],
     )
-    async def test_modernize_user(self, data_to_update, existing_user: User, exception):
+    async def test_edit_user(self, data_to_update, existing_user: User, exception):
         self.user_repo.get_user_by_id.return_value = existing_user
         self.user_repo.update_user_data.return_value = existing_user
 
         if exception:
             with pytest.raises(exception):
-                await self.user_service.modernize_user(
+                await self.user_service.edit_user(
                     user_id=fake_user.id, user_data=data_to_update
                 )
         else:
-            result = await self.user_service.modernize_user(
+            result = await self.user_service.edit_user(
                 user_id=existing_user.id, user_data=data_to_update
             )
 

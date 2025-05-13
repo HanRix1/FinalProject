@@ -23,7 +23,7 @@ async def send_message(
     request: Request,
     new_news: Annotated[NewNewsSchema, Body()],
 ):
-    user_id = await auth_service.check_autorization(request=request)
+    user_id = await auth_service.check_authorization(request=request)
     await event_service.post_new_news(new_news=new_news, user_id=user_id)
     return JSONResponse({"message": "News was Published"})
 
@@ -32,7 +32,7 @@ async def send_message(
 async def get_last_message(
     event_service: EventServiceDep, auth_service: AuthServiceDep, request: Request
 ):
-    await auth_service.check_autorization(request=request)
+    await auth_service.check_authorization(request=request)
     news = await event_service.view_last_news()
     return news
 
@@ -41,7 +41,7 @@ async def get_last_message(
 async def get_news(
     event_service: EventServiceDep, auth_service: AuthServiceDep, request: Request
 ):
-    await auth_service.check_autorization(request=request)
+    await auth_service.check_authorization(request=request)
     news = await event_service.view_all_news()
     return news
 
@@ -50,7 +50,7 @@ async def get_news(
 async def get_personal_rating_matrix(
     event_service: EventServiceDep, auth_service: AuthServiceDep, request: Request
 ):
-    user_id = await auth_service.check_autorization(request=request)
+    user_id = await auth_service.check_authorization(request=request)
     raintg = await event_service.view_rating_for_person(user_id=user_id)
     return raintg
 
@@ -62,8 +62,8 @@ async def get_personal_quarter_avg(
     request: Request,
     quarter: Annotated[QuarterSchema, Depends()],
 ):
-    user_id = await auth_service.check_autorization(request=request)
-    quarter_avg = await event_service.view_quarter_avarage_for_person(
+    user_id = await auth_service.check_authorization(request=request)
+    quarter_avg = await event_service.view_quarter_average_for_person(
         user_id=user_id, quarter=quarter
     )
     return quarter_avg
@@ -73,7 +73,7 @@ async def get_personal_quarter_avg(
 async def get_personal_annual_summary(
     event_service: EventServiceDep, auth_service: AuthServiceDep, request: Request
 ):
-    user_id = await auth_service.check_autorization(request=request)
+    user_id = await auth_service.check_authorization(request=request)
     annual_summary = await event_service.view_annual_summary(user_id=user_id)
     return annual_summary
 
@@ -85,6 +85,6 @@ async def get_monthly_calendar(
     request: Request,
     period: Annotated[CalendarSchema, Depends()],
 ):
-    user_id = await auth_service.check_autorization(request=request)
+    user_id = await auth_service.check_authorization(request=request)
     tasks = await event_service.view_calendar(user_id=user_id, period=period)
     return tasks
