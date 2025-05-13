@@ -1,28 +1,38 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from typing import Annotated
+from fastapi import Query
 
 
 class UserSchema(BaseModel):
-    fullname: str = Field(...)
-    email: EmailStr = Field(...)
-    password: str = Field(...)
+    name: Annotated[str, Field(min_length=2, max_length=20)]
+    email: Annotated[EmailStr, Field()]
+    password: Annotated[str, Field(min_length=4, max_length=100)]
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
-                "fullname": "Abdulazeez Abdulazeez Adeshina",
-                "email": "abdulazeez@x.com",
-                "password": "weakpassword"
+                "name": "Kozhemyaka Artem Alexsandrovich",
+                "email": "tvoyo_mblLo@mail.ru",
+                "password": "password",
             }
         }
+    )
+
 
 class UserLoginSchema(BaseModel):
-    email: EmailStr = Field(...)
-    password: str = Field(...)
+    email: Annotated[EmailStr, Field()]
+    password: Annotated[str, Field(min_length=4, max_length=100)]
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "email": "abdulazeez@x.com",
-                "password": "weakpassword"
-            }
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"email": "tvoyo_mblLo@mail.ru", "password": "password"}
         }
+    )
+
+
+class UserUpdateSchema(BaseModel):
+    new_name: Annotated[str, Query(min_length=2, max_length=20)]
+
+
+class RecoveryTokenSchema(BaseModel):
+    token: Annotated[str, Query(min_length=32, max_length=128)]

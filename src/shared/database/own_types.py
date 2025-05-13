@@ -19,4 +19,5 @@ int32_pk = Annotated[
 ]
 numeric_10_2 = Annotated[Decimal, mapped_column(Numeric(precision=10, scale=2))]
 str_128 = Annotated[str, mapped_column(String(128))]
+str_256 = Annotated[str, mapped_column(String(156))]
 str_64 = Annotated[str, mapped_column(String(64))]
